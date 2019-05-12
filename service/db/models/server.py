@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import time
-from enum import auto, IntEnum, Enum
+from enum import auto, IntEnum
 
+from service.db.models.base import Base
 from ..db import db_sqlalchemy
 
 
@@ -29,13 +29,37 @@ class ServerStatus(IntEnum):
         return ServerStatus(status + 1)
 
 
-class Server(db_sqlalchemy.Model):
-    id = db_sqlalchemy.Column(db_sqlalchemy.Integer, primary_key=True)
-    status = db_sqlalchemy.Column(db_sqlalchemy.Text)
-    creation_ts = db_sqlalchemy.Column(db_sqlalchemy.TIMESTAMP)
-    modification_ts = db_sqlalchemy.Column(db_sqlalchemy.TIMESTAMP)
+class Server(Base):
+    __tablename__ = 'server'
+
+    status = db_sqlalchemy.Column(db_sqlalchemy.Integer)
+    server_rack_id = db_sqlalchemy.Column(db_sqlalchemy.Integer)
+    date_expiration = db_sqlalchemy.Column(db_sqlalchemy.DateTime, default=db_sqlalchemy.func.current_timestamp())
 
     def __init__(self):
-        self.creation_ts = time.time()
-        self.modification_ts = time.time()
-        self.status = Server.ServerStatus.UNPAID
+        self.status = ServerStatus.UNPAID
+
+    @classmethod
+    def create(self):
+        server = Server()
+        db_sqlalchemy.session.add(server)
+        db_sqlalchemy.session.commit()
+        return server
+
+    def delete(self):
+        self.date_expiration = None
+        self.status = ServerStatus.DELETED
+        db_sqlalchemy.session.commit()
+
+    def to_dict(self):
+        result = {
+            'id': self.id,
+            'status': ServerStatus.get_name(self.status),
+            'created': self.date_created,
+            'modified': self.date_modified,
+            'serverRackId': self.server_rack_id
+        }
+        if self.status in frozenset([ServerStatus.PAID, ServerStatus.ACTIVE]):
+            result['expire'] = self.date_expiration
+
+        return result
