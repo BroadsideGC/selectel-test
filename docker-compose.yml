@@ -1,0 +1,25 @@
+version: '3.3'
+
+networks:
+  default:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.192.0.0/16
+
+services:
+
+  app:
+    build:
+      context: ""
+      dockerfile: 'docker/app/Dockerfile'
+      args:
+        gunicorn_options: '--workers=1 --access-logfile=- --reload'
+    ports:
+      - '8000:8000'
+    volumes:
+      - './:/opt/app'
+    environment:
+      LOG_LEVEL: 'DEBUG'
+      PORT: '8000'
+
