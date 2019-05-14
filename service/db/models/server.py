@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import random
+import threading
+from datetime import datetime
 from enum import auto, IntEnum
 
 from service.db.models.base import Base
@@ -40,18 +43,33 @@ class Server(Base):
         self.status = ServerStatus.UNPAID
 
     @classmethod
-    def create(self):
+    def create(cls) -> Server:
         server = Server()
         db_sqlalchemy.session.add(server)
         db_sqlalchemy.session.commit()
         return server
 
-    def delete(self):
+    def action_pay(self, expiration_date: int) -> None:
+        if self.status == ServerStatus.UNPAID:
+            self.status = ServerStatus.PAID
+
+        self.date_expiration = datetime.fromtimestamp(expiration_date)
+        db_sqlalchemy.session.commit()
+
+        if self.status != ServerStatus.ACTIVE:
+            thr = threading.Timer(random.randint(5, 15), self.activate)
+            thr.start()
+
+    def activate(self) -> None:
+        self.status = ServerStatus.ACTIVE
+        db_sqlalchemy.session.commit()
+
+    def delete(self) -> None:
         self.date_expiration = None
         self.status = ServerStatus.DELETED
         db_sqlalchemy.session.commit()
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         result = {
             'id': self.id,
             'status': ServerStatus.get_name(self.status),
