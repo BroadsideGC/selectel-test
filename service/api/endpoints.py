@@ -43,7 +43,7 @@ class ServerAPI(Resource):
         server = Server.query.get(id)
         if server:
             if server.status == ServerStatus.DELETED:
-                return v1_namespace.abort(410, 'Server deleted')
+                v1_namespace.abort(410, 'Server deleted')
             return jsonify(server.to_dict())
         else:
             v1_namespace.abort(404, 'Server not found')
@@ -52,7 +52,7 @@ class ServerAPI(Resource):
         server = Server.query.get(id)
         if server:
             if server.status == ServerStatus.DELETED:
-                return v1_namespace.abort(410, 'Server deleted')
+                v1_namespace.abort(410, 'Server deleted')
             action = action_reqparser.parse_args(request).get('action')
             if action == 'pay':
                 expiration_date = expiration_date_reqparser.parse_args(request).get('expirationDate')
@@ -98,15 +98,17 @@ class ServerRackAPI(Resource):
                 return v1_namespace.abort(410, 'Server rack deleted')
             return jsonify(server_rack.to_dict())
         else:
-            return v1_namespace.abort(404, 'Server rack not found')
+            v1_namespace.abort(404, 'Server rack not found')
 
     def put(self, id):
         server_rack = ServerRack.query.get(id)
         if server_rack:
             if server_rack.deleted:
-                return v1_namespace.abort(410, 'Server rack deleted')
+                v1_namespace.abort(410, 'Server rack deleted')
             action = action_reqparser.parse_args(request).get('action')
             if action == 'add-server':
+                if len(server_rack.servers) == server_rack.size:
+                    v1_namespace.abort(422, 'Server rack capacity already reached')
                 server_id = server_id_reqparser.parse_args(request).get('serverId')
                 if not server_rack.add_server(server_id):
                     v1_namespace.abort(422, 'Server belong to other server rack')
@@ -116,7 +118,7 @@ class ServerRackAPI(Resource):
                 if not server_rack.add_server(server_id):
                     v1_namespace.abort(422, 'Server doesn`t belong to server rack')
             else:
-                return v1_namespace.abort(400, 'Invalid action with server')
+                v1_namespace.abort(400, 'Invalid action with server')
             return jsonify(RESULT_OK)
         else:
             v1_namespace.abort(404, 'Server rack not found')
