@@ -15,6 +15,8 @@ expiration_date_reqparser = reqparse.RequestParser()
 expiration_date_reqparser.add_argument('expirationDate', type=int, required=True, location=['json'])
 is_big_reqparser = reqparse.RequestParser()
 is_big_reqparser.add_argument('isBig', type=bool, default=False)
+server_id_reqparser = reqparse.RequestParser()
+server_id_reqparser.add_argument('serverId', type=int, required=True, location=['json'])
 
 
 @v1_namespace.route('/servers')
@@ -40,16 +42,17 @@ class ServerAPI(Resource):
     def get(self, id):
         server = Server.query.get(id)
         if server:
+            if server.status == ServerStatus.DELETED:
+                return v1_namespace.abort(410, 'Server deleted')
             return jsonify(server.to_dict())
         else:
             v1_namespace.abort(404, 'Server not found')
 
     def put(self, id):
-        print(id)
         server = Server.query.get(id)
         if server:
             if server.status == ServerStatus.DELETED:
-                return v1_namespace.abort(4040, 'Server deleted')
+                return v1_namespace.abort(410, 'Server deleted')
             action = action_reqparser.parse_args(request).get('action')
             if action == 'pay':
                 expiration_date = expiration_date_reqparser.parse_args(request).get('expirationDate')
@@ -58,7 +61,7 @@ class ServerAPI(Resource):
                 return v1_namespace.abort(400, 'Invalid action with server')
             return jsonify(RESULT_OK)
         else:
-            v1_namespace.abort(404)
+            v1_namespace.abort(404, 'Server not found')
 
     def delete(self, id):
         server = Server.query.get(id)
@@ -80,7 +83,8 @@ class ServerRacksAPI(Resource):
         return jsonify([s.to_dict() for s in server_rack])
 
     def post(self):
-        server_rack = ServerRack.create()
+        is_big = sort_by_date_reqparser.parse_args(request).get('isBig')
+        server_rack = ServerRack.create(is_big=is_big)
         return jsonify({'result': {'id': server_rack.id}})
 
 
@@ -90,15 +94,35 @@ class ServerRackAPI(Resource):
     def get(self, id):
         server_rack = ServerRack.query.get(id)
         if server_rack:
+            if server_rack.deleted:
+                return v1_namespace.abort(410, 'Server rack deleted')
             return jsonify(server_rack.to_dict())
         else:
             return v1_namespace.abort(404, 'Server rack not found')
 
     def put(self, id):
-        return jsonify()
+        server_rack = ServerRack.query.get(id)
+        if server_rack:
+            if server_rack.deleted:
+                return v1_namespace.abort(410, 'Server rack deleted')
+            action = action_reqparser.parse_args(request).get('action')
+            if action == 'add-server':
+                server_id = server_id_reqparser.parse_args(request).get('serverId')
+                if not server_rack.add_server(server_id):
+                    v1_namespace.abort(422, 'Server belong to other server rack')
+            elif action == 'remove-server':
+                server_id = server_id_reqparser.parse_args(request).get('serverId')
+                server_rack.add_server(server_id)
+                if not server_rack.add_server(server_id):
+                    v1_namespace.abort(422, 'Server doesn`t belong to server rack')
+            else:
+                return v1_namespace.abort(400, 'Invalid action with server')
+            return jsonify(RESULT_OK)
+        else:
+            v1_namespace.abort(404, 'Server rack not found')
 
     def delete(self, id):
         server_rack = ServerRack.query.get(id)
-        if server_rack:
+        if server_rack and not server_rack.deleted:
             server_rack.delete()
         return jsonify(RESULT_OK)

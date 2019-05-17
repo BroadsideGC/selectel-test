@@ -6,4 +6,4 @@ log = logging.getLogger(__name__)
 
 api = Api(version='1.0')
 
-RESULT_OK = {'result': '0'}
+RESULT_OK = {'result': 'ok'}
