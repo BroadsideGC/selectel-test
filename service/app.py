@@ -1,21 +1,18 @@
 import logging
+import sys
 
 from flask import Flask, Blueprint
 
-from service.api.api import api
+from service.api.api import api, page_not_found
 from service.api.endpoints import v1_namespace
 from service.db import db
-from service.db.models.server import ServerStatus
-
-logger = logging.getLogger(__name__)
+from service.settings import LOG_LEVEL
 
 
 def create_app(settings=None):
     app = Flask(__name__)
 
-    @app.route('/')
-    def hello():
-        return str(ServerStatus.get_next_status(ServerStatus.UNPAID).name)
+    app.register_error_handler(404, page_not_found)
 
     app.config['SQLALCHEMY_DATABASE_URI'] = db.SQLALCHEMY_DATABASE_URI
 
@@ -34,6 +31,13 @@ def create_app(settings=None):
         app.config.update(settings)
 
     app.register_blueprint(api_bp)
+
+    formatter = logging.Formatter(fmt="%(asctime)s %(levelname)s %(module)s: %(message)s",
+                                  datefmt="%H:%M:%S")
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+    logging.getLogger().addHandler(handler)
+    logging.getLogger().setLevel(LOG_LEVEL)
 
     return app
 

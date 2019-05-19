@@ -111,7 +111,7 @@ class ServerRackAPI(Resource):
                     v1_namespace.abort(422, 'Server rack capacity already reached')
                 server_id = server_id_reqparser.parse_args(request).get('serverId')
                 if not server_rack.add_server(server_id):
-                    v1_namespace.abort(422, 'Server belong to other server rack')
+                    v1_namespace.abort(422, 'Server belong to other server rack or doesn`t exist')
             elif action == 'remove-server':
                 server_id = server_id_reqparser.parse_args(request).get('serverId')
                 server_rack.add_server(server_id)

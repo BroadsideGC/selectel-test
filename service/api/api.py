@@ -1,9 +1,10 @@
-import logging
-
+import flask
 from flask_restplus import Api
-
-log = logging.getLogger(__name__)
 
 api = Api(version='1.0')
 
 RESULT_OK = {'result': 'ok'}
+
+
+def page_not_found(e):
+    return flask.jsonify({'message': str(e)}), 404

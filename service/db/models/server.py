@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import random
 import threading
 from datetime import datetime
@@ -47,6 +48,7 @@ class Server(Base):
         server = Server()
         db_sqlalchemy.session.add(server)
         db_sqlalchemy.session.commit()
+        logging.info('Server created with id {}'.format(server.id))
         return server
 
     def action_pay(self, expiration_date: int) -> None:
@@ -55,6 +57,7 @@ class Server(Base):
 
         self.date_expiration = datetime.fromtimestamp(expiration_date)
         db_sqlalchemy.session.commit()
+        logging.info('Server with id {} paid'.format(self.id))
 
         if self.status != ServerStatus.ACTIVE:
             thr = threading.Timer(random.randint(5, 15), self.activate)
@@ -63,11 +66,13 @@ class Server(Base):
     def activate(self) -> None:
         self.status = ServerStatus.ACTIVE
         db_sqlalchemy.session.commit()
+        logging.info('Server with id {} activated'.format(self.id))
 
     def delete(self) -> None:
         self.date_expiration = None
         self.status = ServerStatus.DELETED
         db_sqlalchemy.session.commit()
+        logging.info('Server with id {} now in status deleted'.format(self.id))
 
     def to_dict(self) -> dict:
         result = {

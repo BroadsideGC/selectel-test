@@ -2,3 +2,4 @@ gunicorn
 flask>=0.12
 sqlalchemy
 flask_sqlalchemy
+pytest

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import List
 
 from sqlalchemy import orm
@@ -21,6 +22,7 @@ class ServerRack(Base):
 
     def __load_servers(self) -> List[Server]:
         result = Server.query.filter(Server.server_rack_id == self.id).all()
+        logging.info('Servers from rack with id {} loaded'.format(self.id))
         return list(result)
 
     @orm.reconstructor
@@ -28,33 +30,51 @@ class ServerRack(Base):
         self.servers = self.__load_servers()
 
     @classmethod
-    def create(self, is_big=False) -> ServerRack:
+    def create(cls, is_big=False) -> ServerRack:
         size = 20 if is_big else 10
         server_rack = ServerRack(size)
         db_sqlalchemy.session.add(server_rack)
         db_sqlalchemy.session.commit()
+        logging.info('Server rack created with id {}'.format(server_rack.id))
         return server_rack
 
     def add_server(self, server_id: int) -> bool:
         server = Server.query.get(server_id)
+        if not server:
+            logging.error('Trying to add non existing server to rack with id {}'.format(server_id))
+            return False
         if not server.server_rack_id:
             server.server_rack_id = self.id
             db_sqlalchemy.session.commit()
             self.servers = self.__load_servers()
+            logging.info('Server with id {} added to rack with id {}'.format(server_id, self.id))
             return True
         elif server.server_rack_id == self.id:
+            logging.info('Server with id {} already in rack with id {}'.format(server_id, self.id))
             return True
         else:
+            logging.error(
+                'Server with id {} can`t be added to rack with id {}, because already in rack with id'.format(server_id,
+                                                                                                              self.id,
+                                                                                                              server.server_rack_id))
             return False
 
-    def delete_server(self, server_id: int) -> bool:
+    def remove_server(self, server_id: int) -> bool:
         server = Server.query.get(server_id)
-        if server.id == server_id:
-            server.server_rack_id = None
-            db_sqlalchemy.session.commit()
-            self.servers = self.__load_servers()
-            return True
+        if server:
+            if server.server_rack_id == self.id:
+                server.server_rack_id = None
+                db_sqlalchemy.session.commit()
+                self.servers = self.__load_servers()
+                logging.info('Server with id {} removed from rack with id {}'.format(server_id, self.id))
+                return True
+            else:
+                logging.error(
+                    'Server with id {} can`t be removed from rack with id {} because belong to rack with id {}'.format(
+                        server_id, self.id, server.server_rack_id))
+                return False
         else:
+            logging.error('Trying to remove non existing server by id {}'.format(server_id))
             return False
 
     def delete(self) -> None:
@@ -63,6 +83,7 @@ class ServerRack(Base):
         self.deleted = True
         db_sqlalchemy.session.commit()
         self.servers = []
+        logging.info('Server rack with id {} deleted'.format(self.id))
 
     def to_dict(self):
         result = {
