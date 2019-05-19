@@ -16,19 +16,16 @@ def create_app(settings=None):
 
     app.config['SQLALCHEMY_DATABASE_URI'] = db.SQLALCHEMY_DATABASE_URI
 
+    if settings:
+        app.config.update(settings)
+
     app.app_context().push()
     db.db_sqlalchemy.init_app(app)
     db.db_sqlalchemy.create_all()
 
-    if settings:
-        app.config.update(settings)
-
     api_bp = Blueprint('api', __name__, url_prefix='/api')
     api.init_app(api_bp)
     api.add_namespace(v1_namespace)
-
-    if settings:
-        app.config.update(settings)
 
     app.register_blueprint(api_bp)
 

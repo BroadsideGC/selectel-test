@@ -5,6 +5,9 @@ import random
 import threading
 from datetime import datetime
 from enum import auto, IntEnum
+from typing import List
+
+from sqlalchemy import desc
 
 from service.db.models.base import Base
 from ..db import db_sqlalchemy
@@ -50,6 +53,19 @@ class Server(Base):
         db_sqlalchemy.session.commit()
         logging.info('Server created with id {}'.format(server.id))
         return server
+
+    @classmethod
+    def get_all(cls, sort_by_date: bool, include_deleted: bool) -> List[Server]:
+        if sort_by_date:
+            sort_by = desc(Server.date_modified)
+        else:
+            sort_by = Server.id
+
+        if include_deleted:
+            servers = Server.query.order_by(sort_by).all()
+        else:
+            servers = Server.query.order_by(sort_by).filter(Server.status != ServerStatus.DELETED)
+        return servers
 
     def action_pay(self, expiration_date: int) -> None:
         if self.status == ServerStatus.UNPAID:

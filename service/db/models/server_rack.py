@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import datetime
 import logging
+import time
 from typing import List
 
-from sqlalchemy import orm
+from sqlalchemy import orm, desc
 
 from service.db.db import db_sqlalchemy
 from service.db.models.base import Base
@@ -22,7 +24,6 @@ class ServerRack(Base):
 
     def __load_servers(self) -> List[Server]:
         result = Server.query.filter(Server.server_rack_id == self.id).all()
-        logging.info('Servers from rack with id {} loaded'.format(self.id))
         return list(result)
 
     @orm.reconstructor
@@ -38,6 +39,19 @@ class ServerRack(Base):
         logging.info('Server rack created with id {}'.format(server_rack.id))
         return server_rack
 
+    @classmethod
+    def get_all(cls, sort_by_date: bool, include_deleted: bool) -> List[ServerRack]:
+        if sort_by_date:
+            sort_by = desc(ServerRack.date_modified)
+        else:
+            sort_by = ServerRack.id
+
+        if include_deleted:
+            server_rack = ServerRack.query.order_by(sort_by).all()
+        else:
+            server_rack = ServerRack.query.order_by(sort_by).filter(ServerRack.deleted == False)
+        return server_rack
+
     def add_server(self, server_id: int) -> bool:
         server = Server.query.get(server_id)
         if not server:
@@ -45,6 +59,7 @@ class ServerRack(Base):
             return False
         if not server.server_rack_id:
             server.server_rack_id = self.id
+            self.date_modified = datetime.datetime.fromtimestamp(time.time())
             db_sqlalchemy.session.commit()
             self.servers = self.__load_servers()
             logging.info('Server with id {} added to rack with id {}'.format(server_id, self.id))
@@ -64,6 +79,7 @@ class ServerRack(Base):
         if server:
             if server.server_rack_id == self.id:
                 server.server_rack_id = None
+                self.date_modified = datetime.datetime.fromtimestamp(time.time())
                 db_sqlalchemy.session.commit()
                 self.servers = self.__load_servers()
                 logging.info('Server with id {} removed from rack with id {}'.format(server_id, self.id))
@@ -91,7 +107,8 @@ class ServerRack(Base):
             'size': self.size,
             'created': self.date_created,
             'modified': self.date_modified,
-            'servers': [s.to_dict() for s in self.servers]
+            'servers': [s.to_dict() for s in self.servers],
+            'isDeleted': self.deleted
         }
 
         return result

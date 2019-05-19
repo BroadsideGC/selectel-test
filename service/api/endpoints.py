@@ -7,8 +7,9 @@ from ..db.models.server import Server, ServerStatus
 
 v1_namespace = api.namespace('v1', description='Servers related operations')
 
-sort_by_date_reqparser = reqparse.RequestParser()
-sort_by_date_reqparser.add_argument('sortByDate', type=bool, default=False)
+get_all_reqparser = reqparse.RequestParser()
+get_all_reqparser.add_argument('sortByDate', type=bool, default=False)
+get_all_reqparser.add_argument('includeDeleted', type=bool, default=False)
 action_reqparser = reqparse.RequestParser()
 action_reqparser.add_argument('action', type=str, required=True, location=['json'])
 expiration_date_reqparser = reqparse.RequestParser()
@@ -23,13 +24,11 @@ server_id_reqparser.add_argument('serverId', type=int, required=True, location=[
 class ServersAPI(Resource):
 
     def get(self):
-        sort_by_date = sort_by_date_reqparser.parse_args(request).get('sortByDate')
-        if sort_by_date:
-            sort_by = Server.date_created
-        else:
-            sort_by = Server.id
-        servers = Server.query.order_by(sort_by).all()
-        return jsonify([s.to_dict() for s in servers])
+        parsed_args = get_all_reqparser.parse_args(request)
+        sort_by_date = parsed_args.get('sortByDate')
+        include_deleted = parsed_args.get('includeDeleted')
+        servers = Server.get_all(sort_by_date, include_deleted)
+        return jsonify({'result': [s.to_dict() for s in servers]})
 
     def post(self):
         server = Server.create()
@@ -44,7 +43,7 @@ class ServerAPI(Resource):
         if server:
             if server.status == ServerStatus.DELETED:
                 v1_namespace.abort(410, 'Server deleted')
-            return jsonify(server.to_dict())
+            return jsonify({'result': server.to_dict()})
         else:
             v1_namespace.abort(404, 'Server not found')
 
@@ -74,16 +73,14 @@ class ServerAPI(Resource):
 class ServerRacksAPI(Resource):
 
     def get(self):
-        sort_by_date = sort_by_date_reqparser.parse_args(request).get('sortByDate')
-        if sort_by_date:
-            sort_by = ServerRack.date_created
-        else:
-            sort_by = ServerRack.id
-        server_rack = ServerRack.query.order_by(sort_by).all()
-        return jsonify([s.to_dict() for s in server_rack])
+        parsed_args = get_all_reqparser.parse_args(request)
+        sort_by_date = parsed_args.get('sortByDate')
+        include_deleted = parsed_args.get('includeDeleted')
+        server_racks = ServerRack.get_all(sort_by_date, include_deleted)
+        return jsonify({'result': [s.to_dict() for s in server_racks]})
 
     def post(self):
-        is_big = sort_by_date_reqparser.parse_args(request).get('isBig')
+        is_big = get_all_reqparser.parse_args(request).get('isBig')
         server_rack = ServerRack.create(is_big=is_big)
         return jsonify({'result': {'id': server_rack.id}})
 
@@ -96,7 +93,7 @@ class ServerRackAPI(Resource):
         if server_rack:
             if server_rack.deleted:
                 return v1_namespace.abort(410, 'Server rack deleted')
-            return jsonify(server_rack.to_dict())
+            return jsonify({'result': server_rack.to_dict()})
         else:
             v1_namespace.abort(404, 'Server rack not found')
 
