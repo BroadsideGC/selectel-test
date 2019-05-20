@@ -1,4 +1,4 @@
-TEST = python -m pytest -vv tests/ -p no:cacheprovider
+TEST = python -m pytest -vv tests/ $(arg) -p no:cacheprovider
 
 .PHONY: clean
 clean:
