@@ -20,6 +20,6 @@ services:
     volumes:
       - './:/opt/app'
     environment:
-      LOG_LEVEL: 'DEBUG'
+      LOG_LEVEL: 'INFO'
       PORT: '8000'
 

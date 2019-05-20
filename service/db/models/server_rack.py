@@ -36,7 +36,7 @@ class ServerRack(Base):
         server_rack = ServerRack(size)
         db_sqlalchemy.session.add(server_rack)
         db_sqlalchemy.session.commit()
-        logging.info('Server rack created with id {}'.format(server_rack.id))
+        logging.info('Server rack loaded with id {}'.format(server_rack.id))
         return server_rack
 
     @classmethod

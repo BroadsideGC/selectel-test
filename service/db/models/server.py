@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 import random
-import threading
 from datetime import datetime
 from enum import auto, IntEnum
+from time import sleep
 from typing import List
 
 from sqlalchemy import desc
@@ -76,11 +76,12 @@ class Server(Base):
         logging.info('Server with id {} paid'.format(self.id))
 
         if self.status != ServerStatus.ACTIVE:
-            thr = threading.Timer(random.randint(5, 15), self.activate)
-            thr.start()
+            sleep(random.randint(5, 7))
+            self.activate()
 
     def activate(self) -> None:
         self.status = ServerStatus.ACTIVE
+
         db_sqlalchemy.session.commit()
         logging.info('Server with id {} activated'.format(self.id))
 

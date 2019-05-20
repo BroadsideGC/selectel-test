@@ -1,5 +1,5 @@
 from flask import jsonify, request
-from flask_restplus import Resource, reqparse
+from flask_restplus import Resource, reqparse, inputs
 
 from service.api.api import api, RESULT_OK
 from service.db.models.server_rack import ServerRack
@@ -8,14 +8,14 @@ from ..db.models.server import Server, ServerStatus
 v1_namespace = api.namespace('v1', description='Servers related operations')
 
 get_all_reqparser = reqparse.RequestParser()
-get_all_reqparser.add_argument('sortByDate', type=bool, default=False)
-get_all_reqparser.add_argument('includeDeleted', type=bool, default=False)
+get_all_reqparser.add_argument('sortByDate', type=inputs.boolean, default=False)
+get_all_reqparser.add_argument('includeDeleted', type=inputs.boolean, default=False)
 action_reqparser = reqparse.RequestParser()
 action_reqparser.add_argument('action', type=str, required=True, location=['json'])
 expiration_date_reqparser = reqparse.RequestParser()
 expiration_date_reqparser.add_argument('expirationDate', type=int, required=True, location=['json'])
 is_big_reqparser = reqparse.RequestParser()
-is_big_reqparser.add_argument('isBig', type=bool, default=False)
+is_big_reqparser.add_argument('isBig', type=inputs.boolean, default=False)
 server_id_reqparser = reqparse.RequestParser()
 server_id_reqparser.add_argument('serverId', type=int, required=True, location=['json'])
 
@@ -80,7 +80,7 @@ class ServerRacksAPI(Resource):
         return jsonify({'result': [s.to_dict() for s in server_racks]})
 
     def post(self):
-        is_big = get_all_reqparser.parse_args(request).get('isBig')
+        is_big = is_big_reqparser.parse_args(request).get('isBig')
         server_rack = ServerRack.create(is_big=is_big)
         return jsonify({'result': {'id': server_rack.id}})
 
@@ -115,7 +115,7 @@ class ServerRackAPI(Resource):
                 if not server_rack.add_server(server_id):
                     v1_namespace.abort(422, 'Server doesn`t belong to server rack')
             else:
-                v1_namespace.abort(400, 'Invalid action with server')
+                v1_namespace.abort(400, 'Invalid action with server rack')
             return jsonify(RESULT_OK)
         else:
             v1_namespace.abort(404, 'Server rack not found')
