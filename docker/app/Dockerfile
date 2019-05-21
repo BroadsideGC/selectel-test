@@ -1,6 +1,6 @@
 FROM python:3.7
 
-LABEL Description='Webim webim-microservice-faq image'
+LABEL Description='Service'
 
 ENV PYTHONUNBUFFERED=true
 ENV PIP_NO_CACHE_DIR=false
